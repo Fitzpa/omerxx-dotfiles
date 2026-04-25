@@ -5,13 +5,27 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit
 compinit
-source <(kubectl completion zsh)
-complete -C '/usr/local/bin/aws_completer' aws
+if (( $+commands[kubectl] )); then
+  source <(kubectl completion zsh)
+fi
+if [ -x /usr/local/bin/aws_completer ]; then
+  complete -C '/usr/local/bin/aws_completer' aws
+fi
 
-source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-bindkey '^w' autosuggest-execute
-bindkey '^e' autosuggest-accept
-bindkey '^u' autosuggest-toggle
+typeset -g _zsh_autosuggestions_script=""
+if (( $+commands[brew] )); then
+  _zsh_autosuggestions_script="$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+if [ -z "$_zsh_autosuggestions_script" ] || [ ! -f "$_zsh_autosuggestions_script" ]; then
+  _zsh_autosuggestions_script="$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+if [ -f "$_zsh_autosuggestions_script" ]; then
+  source "$_zsh_autosuggestions_script"
+  bindkey '^w' autosuggest-execute
+  bindkey '^e' autosuggest-accept
+  bindkey '^u' autosuggest-toggle
+fi
+unset _zsh_autosuggestions_script
 bindkey '^L' vi-forward-word
 bindkey '^k' up-line-or-search
 bindkey '^j' down-line-or-search
@@ -22,7 +36,13 @@ export STARSHIP_CONFIG=~/.config/starship/starship.toml
 # You may need to manually set your language environment
 export LANG=en_US.UTF-8
 
-export EDITOR=/opt/homebrew/bin/nvim
+if [ -x "$HOME/.nix-profile/bin/nvim" ]; then
+  export EDITOR="$HOME/.nix-profile/bin/nvim"
+elif [ -x /opt/homebrew/bin/nvim ]; then
+  export EDITOR=/opt/homebrew/bin/nvim
+else
+  export EDITOR=nvim
+fi
 
 alias la=tree
 alias cat=bat
@@ -59,15 +79,19 @@ alias .....="cd ../../../.."
 alias ......="cd ../../../../.."
 
 # GO
-export GOPATH='/Users/omerxx/go'
+export GOPATH="${GOPATH:-$HOME/go}"
 
 # VIM
-alias v="/Users/omerxx/.nix-profile/bin/nvim"
+if [ -x "$HOME/.nix-profile/bin/nvim" ]; then
+  alias v="$HOME/.nix-profile/bin/nvim"
+else
+  alias v="nvim"
+fi
 
 # Nmap
 alias nm="nmap -sC -sV -oN nmap"
 
-export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/omer/.vimpkg/bin:${GOPATH}/bin:/Users/omerxx/.cargo/bin
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.vimpkg/bin:${GOPATH}/bin:$HOME/.cargo/bin
 
 alias cl='clear'
 
@@ -112,7 +136,12 @@ alias gr='~/go/src/github.com/tomnomnom/gf/gf'
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow'
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-export PATH=/opt/homebrew/bin:$PATH
+if [ -d /opt/homebrew/bin ]; then
+  export PATH=/opt/homebrew/bin:$PATH
+fi
+if [ -d /home/linuxbrew/.linuxbrew/bin ]; then
+  export PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
+fi
 
 alias mat='osascript -e "tell application \"System Events\" to key code 126 using {command down}" && tmux neww "cmatrix"'
 
@@ -149,8 +178,14 @@ fv() { nvim "$(find . -type f -not -path '*/.*' | fzf)" }
  fi
  # End Nix
 
-export XDG_CONFIG_HOME="/Users/omerxx/.config"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-eval "$(zoxide init zsh)"
-eval "$(atuin init zsh)"
-eval "$(direnv hook zsh)"
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init zsh)"
+fi
+if (( $+commands[atuin] )); then
+  eval "$(atuin init zsh)"
+fi
+if (( $+commands[direnv] )); then
+  eval "$(direnv hook zsh)"
+fi
